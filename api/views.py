@@ -10,6 +10,7 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import authenticate, login, logout
 
 
 
@@ -94,6 +95,25 @@ class AdminViewset(viewsets.ViewSet):
         admin = self.queryset.get(pk=pk)
         admin.delete()
         return Response(status=204)
+
+    @action(detail=False, methods=['post'], url_path='auth_admin')
+    def auth_admin(self, request):
+        id_admin = request.data.get('id_admin')
+        mot_de_passe = request.data.get('mot_de_passe')
+        user = authenticate(request, id_admin=id_admin, mot_de_passe=mot_de_passe)
+        try:
+            admin = Admin.objects.get(id_admin=id_admin)
+            if admin.mot_de_passe == mot_de_passe:  # Note: Il faudrait utiliser un hash en production
+                serializer = self.serializer_class(admin)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        except Admin.DoesNotExist:
+            pass
+        
+        return Response(
+            {'error': 'Identifiants invalides'}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
     
         # Utilisation
 class UtilisationViewset(viewsets.ViewSet):
